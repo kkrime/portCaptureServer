@@ -1,7 +1,12 @@
 package main
 
-import "fmt"
+import (
+	"log"
+	"portCaptureServer/app"
+)
 
 func main() {
-	fmt.Println("vim-go")
+	if err := app.NewApp().Run(); err != nil {
+		log.Fatal(err)
+	}
 }
