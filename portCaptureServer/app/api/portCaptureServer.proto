@@ -5,7 +5,7 @@ package pb;
 option go_package = "portCaptureServer/app/server/api/pb";
 
 service PortCaptureService {
-  rpc  SavePorts(stream Ports) returns (PortCaptureServiceResponse) {}
+  rpc  SavePorts(stream Port) returns (PortCaptureServiceResponse) {}
 }
 
 message PortCaptureServiceResponse {
@@ -21,8 +21,4 @@ message Port {
   repeated string regions = 5;
   repeated float coordinates = 6;
   repeated string unlocs  = 7;
-}
-
-message Ports {
-  repeated Port Ports = 1;
 }

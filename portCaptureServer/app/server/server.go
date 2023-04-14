@@ -1,6 +1,6 @@
 package server
 
-import "portCaptureServer/app/server/api/pb"
+import "portCaptureServer/app/api/pb"
 
 type Server struct {
 	pb.UnimplementedPortCaptureServiceServer

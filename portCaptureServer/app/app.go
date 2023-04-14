@@ -3,8 +3,8 @@ package app
 import (
 	"log"
 	"net"
+	"portCaptureServer/app/api/pb"
 	"portCaptureServer/app/server"
-	"portCaptureServer/app/server/api/pb"
 
 	"google.golang.org/grpc"
 )

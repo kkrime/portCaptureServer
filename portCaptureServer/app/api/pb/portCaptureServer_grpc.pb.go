@@ -47,7 +47,7 @@ func (c *portCaptureServiceClient) SavePorts(ctx context.Context, opts ...grpc.C
 }
 
 type PortCaptureService_SavePortsClient interface {
-	Send(*Ports) error
+	Send(*Port) error
 	CloseAndRecv() (*PortCaptureServiceResponse, error)
 	grpc.ClientStream
 }
@@ -56,7 +56,7 @@ type portCaptureServiceSavePortsClient struct {
 	grpc.ClientStream
 }
 
-func (x *portCaptureServiceSavePortsClient) Send(m *Ports) error {
+func (x *portCaptureServiceSavePortsClient) Send(m *Port) error {
 	return x.ClientStream.SendMsg(m)
 }
 
@@ -105,7 +105,7 @@ func _PortCaptureService_SavePorts_Handler(srv interface{}, stream grpc.ServerSt
 
 type PortCaptureService_SavePortsServer interface {
 	SendAndClose(*PortCaptureServiceResponse) error
-	Recv() (*Ports, error)
+	Recv() (*Port, error)
 	grpc.ServerStream
 }
 
@@ -117,8 +117,8 @@ func (x *portCaptureServiceSavePortsServer) SendAndClose(m *PortCaptureServiceRe
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *portCaptureServiceSavePortsServer) Recv() (*Ports, error) {
-	m := new(Ports)
+func (x *portCaptureServiceSavePortsServer) Recv() (*Port, error) {
+	m := new(Port)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
