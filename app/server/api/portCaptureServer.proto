@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "portCaptureServer/app/server/api/pb";
+
+service PortCaptureService {
+  rpc  SavePorts(stream Ports) returns (PortCaptureServiceResponse) {}
+}
+
+message PortCaptureServiceResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message Port {
+  string name = 1;
+  string city = 2;
+  string country = 3;
+  repeated string alias = 4;
+  repeated string regions = 5;
+  repeated float coordinates = 6;
+  repeated string unlocs  = 7;
+}
+
+message Ports {
+  repeated Port Ports = 1;
+}
