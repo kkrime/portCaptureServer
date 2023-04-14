@@ -1,0 +1,19 @@
+version: "3.7"
+
+services:
+
+  port_capture_server:
+    build:
+      context: ./portCaptureServer
+      dockerfile: ./Dockerfile
+
+  port_capture_server_translation:
+    build:
+      context: .
+      dockerfile: ./portCaptureServerTranslator/Dockerfile
+    depends_on:
+      - port_capture_server
+    ports:
+      - 8080:8080
+    environment:
+      PORT_CAPTURE_SERVER_ADDRESS: "port_capture_server:20000"
