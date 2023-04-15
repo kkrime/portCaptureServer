@@ -1,18 +1,22 @@
 package entity
 
-import "time"
+import (
+	"time"
+)
 
 type Port struct {
-	Id       int64  `db:"id"`
-	Name     string `db:"name"`
-	Code     string `db:"code"`
-	City     string `db:"city"`
-	Country  string `db:"country"`
-	Alias    *[]Alias
-	Regions  *[]Region
-	Province string `db:"province"`
-	Timezone string `db:"timezone"`
-	Unlocs   *[]Unloc
+	Id           int64      `db:"id"`
+	PrimaryUnloc string     `db:"primary_unloc"`
+	Name         string     `db:"name"`
+	Code         string     `db:"code"`
+	City         string     `db:"city"`
+	Country      string     `db:"country"`
+	Alias        *[]Alias   `db:"alias"`
+	Regions      *[]Region  `db:"regions"`
+	Coordinantes [2]float32 `db:"coordinantes"`
+	Province     string     `db:"province"`
+	Timezone     string     `db:"timezone"`
+	Unlocs       *[]Unloc   `db:"unlocs"`
 
 	CreatedAt time.Time `db:"created_at"`
 	UpdatedAt time.Time `db:"updated_at"`

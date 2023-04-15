@@ -1,6 +1,8 @@
 package config
 
-import "github.com/BurntSushi/toml"
+import (
+	"github.com/BurntSushi/toml"
+)
 
 type DBConfig struct {
 	Host     string

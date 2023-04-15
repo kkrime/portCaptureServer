@@ -15,13 +15,14 @@ message PortCaptureServiceResponse {
 
 message Port {
   string name = 1;
-  string code = 2;
-  string city = 3;
-  string country = 4;
-  string province = 5;
-  string timezone = 6;
-  repeated string alias = 7;
-  repeated string regions = 8;
-  repeated float coordinates = 9;
-  repeated string unlocs  = 10;
+  string primary_unloc = 2;
+  string code = 3;
+  string city = 4;
+  string country = 5;
+  string province = 6;
+  string timezone = 7;
+  repeated string alias = 8;
+  repeated string regions = 9;
+  repeated float coordinates = 10;
+  repeated string unlocs  = 11;
 }

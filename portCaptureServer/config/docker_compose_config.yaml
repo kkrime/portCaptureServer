@@ -1,0 +1,7 @@
+[DBConfig]
+host     = 'db'
+port     = 5432
+user     = 'postgres'
+password = 'password'
+dbname   = 'port_capture'
+

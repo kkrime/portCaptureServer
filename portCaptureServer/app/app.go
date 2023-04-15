@@ -12,6 +12,7 @@ import (
 	"portCaptureServer/app/server"
 	"portCaptureServer/app/service"
 	"syscall"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	sqldblogger "github.com/simukti/sqldb-logger"
@@ -96,8 +97,20 @@ func (a *app) Run() error {
 	go func() {
 		s := <-sigCh
 		log.Printf("got signal %v, attempting graceful shutdown", s)
-		grpcServer.GracefulStop()
-		log.Printf("Graceful shutdown complete")
+		gracefulShutdownChann := make(chan struct{})
+		go func() {
+			grpcServer.GracefulStop()
+			gracefulShutdownChann <- struct{}{}
+		}()
+
+		gracefulShutdownTimeoutChann := time.NewTimer(time.Second * 5)
+		select {
+		case <-gracefulShutdownChann:
+			log.Printf("Graceful shutdown complete")
+		case <-gracefulShutdownTimeoutChann.C:
+			log.Printf("Graceful shutdown timed out, shutting down forefully")
+			grpcServer.Stop()
+		}
 	}()
 
 	return grpcServer.Serve(listner)
