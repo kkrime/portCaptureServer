@@ -14,17 +14,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jmoiron/sqlx"
-	sqldblogger "github.com/simukti/sqldb-logger"
-	"github.com/simukti/sqldb-logger/logadapter/logrusadapter"
-	"github.com/sirupsen/logrus"
 	"gitlab.com/avarf/getenvs"
 	"google.golang.org/grpc"
 
-	// _ "github.com/bmizerany/pq"
-	// _ "github.com/jackc/pgx/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	// _ "github.com/lib/pq"
 )
 
 type App interface {
@@ -54,31 +47,6 @@ func NewApp() (App, error) {
 	SavePortService := service.NewSavePortsService(SavePortsRepository)
 	app.server = server.NewServer(SavePortService)
 	return app, nil
-}
-
-func (a *app) ConnectToDB(config config.DBConfig) (*sqlx.DB, error) {
-
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		config.Host, config.Port, config.User, config.Password, config.Dbname)
-
-	database, err := sqlx.Open("pgx", dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	dbLog := CreateNewLogger()
-
-	database.DB = sqldblogger.OpenDriver(dsn, database.DB.Driver(), logrusadapter.New(dbLog),
-		sqldblogger.WithTimeFormat(sqldblogger.TimeFormatRFC3339),
-		sqldblogger.WithLogDriverErrorSkip(true),
-		sqldblogger.WithSQLQueryAsMessage(true))
-
-	err = database.Ping()
-	if err != nil {
-		return nil, err
-	}
-
-	return database, nil
 }
 
 func (a *app) Run() error {
@@ -114,17 +82,4 @@ func (a *app) Run() error {
 	}()
 
 	return grpcServer.Serve(listner)
-}
-
-func CreateNewLogger() *logrus.Logger {
-	return &logrus.Logger{
-		Out:   os.Stdout,
-		Level: logrus.DebugLevel,
-		Formatter: &logrus.TextFormatter{
-			FullTimestamp:   true,
-			TimestampFormat: "2006-01-02 15:04:05",
-			PadLevelText:    true,
-			ForceColors:     true,
-		},
-	}
 }
