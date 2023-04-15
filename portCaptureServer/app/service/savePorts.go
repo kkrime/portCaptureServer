@@ -11,7 +11,7 @@ import (
 
 type savePortToDBParam struct {
 	ctx         context.Context
-	wg          sync.WaitGroup
+	wg          *sync.WaitGroup
 	transaction repository.Transaction
 	port        *entity.Port
 	resultChann chan<- error
@@ -26,9 +26,9 @@ func NewSavePortsService(savePortsRepository repository.SavePortsRepository) Sav
 	savePortsToDBChann := make(chan *savePortToDBParam)
 
 	for i := 0; i < 50; i++ {
+		// for i := 0; i < 2; i++ {
 		go func() {
 			for portsDBParams := range savePortsToDBChann {
-				defer portsDBParams.wg.Done()
 
 				ctx := portsDBParams.ctx
 				transaction := portsDBParams.transaction
@@ -36,12 +36,15 @@ func NewSavePortsService(savePortsRepository repository.SavePortsRepository) Sav
 				resultChann := portsDBParams.resultChann
 
 				resultChann <- savePortsRepository.SavePort(ctx, transaction, port)
+
+				portsDBParams.wg.Done()
 			}
 		}()
 	}
 
 	return &savePortsService{
-		savePortsToDBChann: savePortsToDBChann,
+		savePortsToDBChann:  savePortsToDBChann,
+		savePortsRepository: savePortsRepository,
 	}
 }
 
@@ -58,32 +61,6 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 	}
 
 	go func() {
-		for {
-			port, err := portStream.Recv()
-			if err == io.EOF {
-				return
-			}
-			if err != nil {
-				// cancel context to stop any db io
-				cancelCtx()
-				errorChann <- err
-				return
-			}
-
-			portEntity := convertPBPortToEntityPort(port)
-
-			wg.Add(1)
-			spp.savePortsToDBChann <- &savePortToDBParam{
-				ctx:         ctx,
-				wg:          wg,
-				transaction: transactoin,
-				port:        portEntity,
-				resultChann: resultChann,
-			}
-		}
-	}()
-
-	go func() {
 		for err := range resultChann {
 			if err != nil {
 				// cancel context to stop any db io
@@ -92,13 +69,32 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 				return
 			}
 		}
-
-		// closing error chan will result in a read of defulat value of error (nil)
-		// close(errorChann)
-		// not closing channel, line 68 might cause a race condition
-		// sending nil instead
-		errorChann <- nil
+		close(errorChann)
 	}()
+
+	for {
+		port, err := portStream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			// cancel context to stop any db io
+			cancelCtx()
+			errorChann <- err
+			break
+		}
+
+		portEntity := convertPBPortToEntityPort(port)
+
+		wg.Add(1)
+		spp.savePortsToDBChann <- &savePortToDBParam{
+			ctx:         ctx,
+			wg:          &wg,
+			transaction: transactoin,
+			port:        portEntity,
+			resultChann: resultChann,
+		}
+	}
 
 	wg.Wait()
 	close(resultChann)
@@ -128,12 +124,13 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 
 func convertPBPortToEntityPort(port *pb.Port) *entity.Port {
 	return &entity.Port{
-		Name:    port.Name,
-		Code:    port.Code,
-		City:    port.City,
-		Country: port.Country,
+		Name:         port.Name,
+		PrimaryUnloc: port.PrimaryUnloc,
+		Code:         port.Code,
+		City:         port.City,
+		Country:      port.Country,
 		Alias: func() *[]entity.Alias {
-			alias := make([]entity.Alias, len(port.Alias))
+			alias := make([]entity.Alias, 0, len(port.Alias))
 			for _, a := range port.Alias {
 				alias = append(alias, entity.Alias{
 					Name: a,
@@ -142,7 +139,7 @@ func convertPBPortToEntityPort(port *pb.Port) *entity.Port {
 			return &alias
 		}(),
 		Regions: func() *[]entity.Region {
-			regions := make([]entity.Region, len(port.Regions))
+			regions := make([]entity.Region, 0, len(port.Regions))
 			for _, r := range port.Regions {
 				regions = append(regions, entity.Region{
 					Name: r,
@@ -150,10 +147,16 @@ func convertPBPortToEntityPort(port *pb.Port) *entity.Port {
 			}
 			return &regions
 		}(),
+		Coordinantes: func() [2]float32 {
+			if len(port.Coordinates) == 2 {
+				return [2]float32{port.Coordinates[0], port.Coordinates[1]}
+			}
+			return [2]float32{-1, -1}
+		}(),
 		Province: port.Province,
 		Timezone: port.Timezone,
 		Unlocs: func() *[]entity.Unloc {
-			unlocs := make([]entity.Unloc, len(port.Unlocs))
+			unlocs := make([]entity.Unloc, 0, len(port.Unlocs))
 			for _, u := range port.Unlocs {
 				unlocs = append(unlocs, entity.Unloc{
 					Name: u,

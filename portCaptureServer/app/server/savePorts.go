@@ -1,19 +1,22 @@
 package server
 
 import (
-	"fmt"
+	"context"
 	"portCaptureServer/app/api/pb"
 )
 
 func (s *Server) SavePorts(portsStream pb.PortCaptureService_SavePortsServer) error {
+	response := pb.PortCaptureServiceResponse{}
 
-	for {
-		port, err := portsStream.Recv()
-		if err != nil {
-			fmt.Printf("err = %+v\n", err)
-			return err
-		}
-
-		fmt.Printf("ports = %+v\n", port)
+	err := s.savePortsService.SavePorts(context.Background(), portsStream)
+	if err != nil {
+		response.Error = err.Error()
+		portsStream.SendAndClose(&response)
+		return err
 	}
+
+	response.Success = true
+	portsStream.SendAndClose(&response)
+
+	return nil
 }
