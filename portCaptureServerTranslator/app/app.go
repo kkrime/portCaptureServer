@@ -1,10 +1,17 @@
 package app
 
 import (
+	"context"
+	"fmt"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
 	portCaptureServerPb "portCaptureServer/app/api/pb"
 	"portCaptureServerTranslator/app/controller"
 	"portCaptureServerTranslator/app/service"
+	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	requestid "github.com/sumit-tembe/gin-requestid"
@@ -60,5 +67,36 @@ func (a *app) startWebServer() error {
 
 	sendPorts.POST("", sendPortsController.SendPorts)
 
-	return router.Run()
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: router,
+	}
+
+	// graceful exit
+	shutdownErrChann := make(chan error, 1)
+	quit := make(chan os.Signal)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-quit
+		log.Println("Shutdown Server ...")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := server.Shutdown(ctx); err != nil {
+			shutdownErrChann <- fmt.Errorf("Server Shutdown: %w", err)
+			return
+		}
+		// catching ctx.Done(). timeout of 5 seconds.
+		select {
+		case <-ctx.Done():
+			log.Println("timeout of 5 seconds.")
+		}
+		close(shutdownErrChann)
+	}()
+
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return err
+	}
+
+	return <-shutdownErrChann
 }
