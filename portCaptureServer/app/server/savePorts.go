@@ -8,12 +8,12 @@ import (
 func (s *Server) SavePorts(portsStream pb.PortCaptureService_SavePortsServer) error {
 
 	for {
-		ports, err := portsStream.Recv()
+		port, err := portsStream.Recv()
 		if err != nil {
 			fmt.Printf("err = %+v\n", err)
 			return err
 		}
 
-		fmt.Printf("ports = %+v\n", ports)
+		fmt.Printf("ports = %+v\n", port)
 	}
 }

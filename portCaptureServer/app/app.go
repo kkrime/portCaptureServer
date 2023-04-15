@@ -5,6 +5,7 @@ import (
 	"net"
 	"portCaptureServer/app/api/pb"
 	"portCaptureServer/app/server"
+	"portCaptureServer/app/service"
 
 	"google.golang.org/grpc"
 )
@@ -19,7 +20,8 @@ type app struct {
 
 func NewApp() App {
 	app := &app{}
-	app.server = server.NewServer()
+	SavePortService := service.NewSavePortsService(nil)
+	app.server = server.NewServer(SavePortService)
 	return app
 }
 
