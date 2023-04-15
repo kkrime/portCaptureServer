@@ -1,11 +1,15 @@
-version: "3.7"
+version: "2.2"
 
 services:
-
   port_capture_server:
     build:
       context: ./portCaptureServer
       dockerfile: ./Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      CONFIG_FILE_PATH: /go/src/portCaptureServer/config/docker_compose_config.yaml
 
   port_capture_server_translation:
     build:
@@ -17,3 +21,21 @@ services:
       - 8080:8080
     environment:
       PORT_CAPTURE_SERVER_ADDRESS: "port_capture_server:20000"
+
+  db:
+    image: postgres:13.2
+    ports:
+      - 5433:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - portCaptureServerDB:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: password
+
+volumes:
+  portCaptureServerDB:
+    external: false
