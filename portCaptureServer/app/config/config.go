@@ -12,7 +12,12 @@ type DBConfig struct {
 	Dbname   string
 }
 type Config struct {
-	DBConfig DBConfig
+	DBConfig    DBConfig
+	PortCapture PortCapture
+}
+
+type PortCapture struct {
+	WorkerThreads int
 }
 
 func ReadConfig(configFilePath string) (*Config, error) {

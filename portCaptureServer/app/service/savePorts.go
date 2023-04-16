@@ -9,6 +9,8 @@ import (
 	"sync"
 )
 
+// savePortToDBParam is pased to the main worker threads
+// to write to the db
 type savePortToDBParam struct {
 	ctx         context.Context
 	wg          *sync.WaitGroup
@@ -22,22 +24,27 @@ type savePortsService struct {
 	savePortsRepository repository.SavePortsRepository
 }
 
-func NewSavePortsService(savePortsRepository repository.SavePortsRepository) SavePortsService {
+func NewSavePortsService(savePortsRepository repository.SavePortsRepository, numberOfWorkerThreads int) SavePortsService {
 	savePortsToDBChann := make(chan *savePortToDBParam)
 
-	for i := 0; i < 50; i++ {
-		// for i := 0; i < 2; i++ {
+	// spawn the main Worker Threads, these are the threads that save the ports to the database
+	for i := 0; i < numberOfWorkerThreads; i++ {
+		// WORKER THREAD
 		go func() {
-			for portsDBParams := range savePortsToDBChann {
+			for savePortsDBParams := range savePortsToDBChann {
+				// using an anonymous function here, so that portsDBParams.wg.Done()
+				// gets called no matter what and there are no hanging go routines
+				// (in the unlikley event of a panic)
+				func() {
+					defer savePortsDBParams.wg.Done()
 
-				ctx := portsDBParams.ctx
-				transaction := portsDBParams.transaction
-				port := portsDBParams.port
-				resultChann := portsDBParams.resultChann
+					ctx := savePortsDBParams.ctx
+					transaction := savePortsDBParams.transaction
+					port := savePortsDBParams.port
+					resultChann := savePortsDBParams.resultChann
 
-				resultChann <- savePortsRepository.SavePort(ctx, transaction, port)
-
-				portsDBParams.wg.Done()
+					resultChann <- savePortsRepository.SavePort(ctx, transaction, port)
+				}()
 			}
 		}()
 	}
@@ -48,6 +55,9 @@ func NewSavePortsService(savePortsRepository repository.SavePortsRepository) Sav
 	}
 }
 
+// SavePort saves incoming ports (from gRPC stream) to the database via the worker threads
+// it works on a all or nothing basis; if there are any errors saving any of the ports,
+// then no ports will be saved to the db
 func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStream) error {
 	var wg sync.WaitGroup
 	resultChann := make(chan error)
@@ -55,16 +65,20 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 
 	ctx, cancelCtx := context.WithCancel(ctx)
 
+	// start transaction
 	transactoin, err := spp.savePortsRepository.StartTransaction()
 	if err != nil {
 		return err
 	}
 
+	// this go routines manages the results from the worker threads above
 	go func() {
 		for err := range resultChann {
 			if err != nil {
 				// cancel context to stop any db io
 				cancelCtx()
+				// if any errors on saving the ports to the db, send it to
+				// errorChann and exit
 				errorChann <- err
 				return
 			}
@@ -72,6 +86,8 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 		close(errorChann)
 	}()
 
+	// this loop reads the ports from the netowrk (gRPC stream) and
+	// the ports to the worker thread
 	for {
 		port, err := portStream.Recv()
 		if err == io.EOF {
@@ -96,6 +112,7 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 		}
 	}
 
+	// wait for all the ports to be written to the db
 	wg.Wait()
 	close(resultChann)
 
@@ -119,9 +136,12 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 		}
 	}
 
+	// commit changes to the db
 	return transactoin.Commit()
 }
 
+// convertPBPortToEntityPort converts the pb (protobuf) format for ports
+// to the entity format
 func convertPBPortToEntityPort(port *pb.Port) *entity.Port {
 	return &entity.Port{
 		Name:         port.Name,

@@ -4,3 +4,6 @@ port     = 5432
 user     = 'postgres'
 password = 'postgres'
 dbname   = 'port_capture'
+
+[PortCapture]
+workerThreads = 50

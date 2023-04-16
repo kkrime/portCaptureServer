@@ -5,13 +5,13 @@ import (
 	"portCaptureServer/app/service"
 )
 
-type Server struct {
+type PortCaptureServer struct {
 	pb.UnimplementedPortCaptureServiceServer
 	savePortsService service.SavePortsService
 }
 
-func NewServer(savePortsService service.SavePortsService) *Server {
-	return &Server{
+func NewPortCaptureServer(savePortsService service.SavePortsService) *PortCaptureServer {
+	return &PortCaptureServer{
 		savePortsService: savePortsService,
 	}
 }

@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -25,7 +24,7 @@ type App interface {
 }
 
 type app struct {
-	server *server.Server
+	portCaptureServer *server.PortCaptureServer
 }
 
 func NewApp() (App, error) {
@@ -33,7 +32,6 @@ func NewApp() (App, error) {
 	configFilePath := getenvs.GetEnvString("CONFIG_FILE_PATH", "./config/local_config.toml")
 
 	config, err := config.ReadConfig(configFilePath)
-	fmt.Printf("config = %+v\n", config)
 	if err != nil {
 		return nil, err
 	}
@@ -43,34 +41,37 @@ func NewApp() (App, error) {
 		return nil, err
 	}
 
+	numberOfWorkerThreads := config.PortCapture.WorkerThreads
+
 	SavePortsRepository := repository.NewSavePortsRepository(db)
-	SavePortService := service.NewSavePortsService(SavePortsRepository)
-	app.server = server.NewServer(SavePortService)
+	SavePortService := service.NewSavePortsService(SavePortsRepository, numberOfWorkerThreads)
+	app.portCaptureServer = server.NewPortCaptureServer(SavePortService)
 	return app, nil
 }
 
 func (a *app) Run() error {
 	listner, err := net.Listen("tcp", ":20000")
 	if err != nil {
-		// log.Errorf("failed to listen: %v", err)
 		return err
 	}
+
 	grpcServer := grpc.NewServer()
-	pb.RegisterPortCaptureServiceServer(grpcServer, a.server)
+	pb.RegisterPortCaptureServiceServer(grpcServer, a.portCaptureServer)
 	log.Printf("server listening on %v", listner.Addr())
 
 	// graceful shut down
-	sigCh := make(chan os.Signal, 1)
+	sigCh := make(chan os.Signal)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		s := <-sigCh
-		log.Printf("got signal %v, attempting graceful shutdown", s)
+		log.Printf("got signal %v, attempting to GRACEFULLY shutdown", s)
 		gracefulShutdownChann := make(chan struct{})
 		go func() {
 			grpcServer.GracefulStop()
 			gracefulShutdownChann <- struct{}{}
 		}()
 
+		// create a timeout of 5 seconds
 		gracefulShutdownTimeoutChann := time.NewTimer(time.Second * 5)
 		select {
 		case <-gracefulShutdownChann:
@@ -81,5 +82,6 @@ func (a *app) Run() error {
 		}
 	}()
 
+	// start the gRPC server
 	return grpcServer.Serve(listner)
 }
