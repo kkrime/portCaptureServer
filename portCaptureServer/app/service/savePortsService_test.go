@@ -445,6 +445,69 @@ func (s *SavePortsServiceTestSuite) Testscan() {
 
 			err: fmt.Errorf("repository.SavePort() failed"),
 		},
+		{
+			name: "Both Recv() returns error + repository.SavePorts() fails",
+
+			savePortsTransactionMock: func() repository.SavePortsRepository {
+				repositoryMock := repoMock.NewSavePortsRepository(s.T())
+
+				repositoryMock.On(
+					"StartTransaction",
+				).
+					Return(
+						func() repository.Transaction {
+							TransactionMock := repoMock.NewTransaction(s.T())
+							TransactionMock.On(
+								"Rollback",
+							).
+								Return(
+									nil,
+								).
+								Once()
+
+							return TransactionMock
+						},
+						nil,
+					).
+					Once()
+
+				repositoryMock.On(
+					"SavePort",
+					mock.Anything,
+					mock.Anything,
+					mock.Anything,
+				).
+					Return(
+						fmt.Errorf("repository.SavePort() failed"),
+					).
+					Once()
+
+				return repositoryMock
+			}(),
+
+			portsStreamMock: func() PortsStream {
+				portStreamMock := serviceMock.NewPortsStream(s.T())
+				portStreamMock.On(
+					"Recv",
+				).
+					Return(
+						&pb.Port{},
+						nil,
+					).Once()
+
+				portStreamMock.On(
+					"Recv",
+				).
+					Return(
+						&pb.Port{},
+						fmt.Errorf("Recv error"),
+					).Once()
+
+				return portStreamMock
+			}(),
+
+			err: fmt.Errorf("Recv error"),
+		},
 	}
 
 	for _, test := range tests {
