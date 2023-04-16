@@ -75,6 +75,7 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 	go func() {
 		// only send the first error
 		firstEroorOccured := false
+
 		for err := range resultChann {
 			if err != nil && !firstEroorOccured {
 				firstEroorOccured = true

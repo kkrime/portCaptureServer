@@ -272,7 +272,7 @@ func (s *SavePortsServiceTestSuite) Testscan() {
 					"Recv",
 				).
 					Return(
-						&pb.Port{},
+						nil,
 						io.EOF,
 					).Once()
 
@@ -354,7 +354,7 @@ func (s *SavePortsServiceTestSuite) Testscan() {
 					"Recv",
 				).
 					Return(
-						&pb.Port{},
+						nil,
 						io.EOF,
 					).Once()
 
@@ -436,7 +436,7 @@ func (s *SavePortsServiceTestSuite) Testscan() {
 					"Recv",
 				).
 					Return(
-						&pb.Port{},
+						nil,
 						io.EOF,
 					).Once()
 
