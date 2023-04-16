@@ -61,9 +61,7 @@ func NewSavePortsService(savePortsRepository repository.SavePortsRepository, num
 func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStream) error {
 	var wg sync.WaitGroup
 	resultChann := make(chan error)
-	errorChann := make(chan error)
-
-	ctx, cancelCtx := context.WithCancel(ctx)
+	errorChann := make(chan error, 1)
 
 	// start transaction
 	transactoin, err := spp.savePortsRepository.StartTransaction()
@@ -71,16 +69,20 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 		return err
 	}
 
+	ctx, cancelCtx := context.WithCancel(ctx)
+
 	// this go routines manages the results from the worker threads above
 	go func() {
+		// only send the first error
+		firstEroorOccured := false
 		for err := range resultChann {
-			if err != nil {
+			if err != nil && !firstEroorOccured {
+				firstEroorOccured = true
 				// cancel context to stop any db io
 				cancelCtx()
 				// if any errors on saving the ports to the db, send it to
-				// errorChann and exit
+				// errorChann
 				errorChann <- err
-				return
 			}
 		}
 		close(errorChann)
@@ -122,12 +124,7 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 			// roll back the transaction
 			transactoin.Rollback()
 
-			// empty resultChann
-			for len(resultChann) > 0 {
-				<-resultChann
-			}
-
-			// empty errorChann
+			// drain the errorChann
 			for len(errorChann) > 0 {
 				<-errorChann
 			}
