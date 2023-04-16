@@ -21,11 +21,15 @@ func (spc *sendPortController) SendPorts(ctx *gin.Context) {
 
 	portsData, err := ctx.GetRawData()
 	if err != nil {
-		// return err
+		abortAndError(ctx, err)
+		return
 	}
 
 	err = spc.sendPortService.SendPort(context.Background(), &portsData)
 	if err != nil {
-		// return err
+		abortAndError(ctx, err)
+		return
 	}
+
+	ctx.JSON(200, getSuccessResponse())
 }
