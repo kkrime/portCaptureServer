@@ -4,5 +4,4 @@ WORKDIR /go/src/portCaptureServer
 RUN go get -d -v portCaptureServer
 # RUN go install portCaptureServer
 # ENTRYPOINT ["/go/bin/portCaptureServer"]
-# NOTE: No compilation as requested
 CMD ["go", "run", "."]
