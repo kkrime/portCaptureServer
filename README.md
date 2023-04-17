@@ -70,7 +70,7 @@ Run the following from the root directory
 2. Build the docker images:</br>
 `sudo docker-compose build`
 3. Start all the services plus the database:</br>
-`sudo docker-compose up`
+`sudo docker-compose up` (the database needs to initialize before all the other services start, so this might take a minute)
 
 
 ## Testing
