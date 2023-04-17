@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	portCaptureServerPb "portCaptureServer/app/api/pb"
 )
 
@@ -33,7 +34,7 @@ func (sps *sendPortService) SendPort(ctx context.Context, portData *[]byte) erro
 		port.PrimaryUnloc = uloc
 		err = stream.Send(port)
 		if err != nil {
-			return err
+			break
 		}
 
 		// for really large files
@@ -42,7 +43,15 @@ func (sps *sendPortService) SendPort(ctx context.Context, portData *[]byte) erro
 		ports[uloc] = nil
 	}
 
-	_, err = stream.CloseAndRecv()
+	response, err := stream.CloseAndRecv()
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	if response.Success == false {
+		return fmt.Errorf(response.Error)
+	}
+
+	return nil
 }
