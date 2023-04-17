@@ -98,6 +98,7 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 	// this loop reads the ports from the netowrk (gRPC stream) and
 	// the ports to the worker thread
 	for {
+		// read in ports from request
 		port, err := portStream.Recv()
 		if err == io.EOF {
 			break
@@ -119,16 +120,22 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 			port:        portEntity,
 			resultChann: resultChann,
 		}
+
+		// in case any of the calls to savePortsRepository.SavePort() fail,
+		// don't bother trying to save the rest of the ports to the Database
+		if ctx.Err() != nil {
+			break
+		}
 	}
 
 	// wait for all the ports to be written to the db
 	wg.Wait()
 	close(resultChann)
 
-	for dbSaveError := range errorChann {
+	for err := range errorChann {
 
-		if dbSaveError != nil {
-			spp.log.Errorf("Error Occured, No Ports Were Saved To The Database: %s", dbSaveError.Error())
+		if err != nil {
+			spp.log.Errorf("Error Occured, No Ports Were Saved To The Database: %s", err.Error())
 
 			// roll back the transaction
 			transactoin.Rollback()
@@ -138,7 +145,7 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 				<-errorChann
 			}
 
-			return dbSaveError
+			return err
 		}
 	}
 
@@ -191,7 +198,7 @@ func convertPBPortToEntityPort(port *pb.Port) *entity.Port {
 			if len(port.Coordinates) == 2 {
 				return [2]float32{port.Coordinates[0], port.Coordinates[1]}
 			}
-			// return default 0, 0
+			// return default -1, -1
 			return [2]float32{-1, -1}
 		}(),
 		Province: port.Province,
