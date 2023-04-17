@@ -7,6 +7,8 @@ import (
 	"portCaptureServer/app/entity"
 	"portCaptureServer/app/repository"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 // savePortToDBParam is pased to the main worker threads
@@ -22,14 +24,16 @@ type savePortToDBParam struct {
 type savePortsService struct {
 	savePortsToDBChann  chan<- *savePortToDBParam
 	savePortsRepository repository.SavePortsRepository
+	log                 *logrus.Logger
 }
 
-func NewSavePortsService(savePortsRepository repository.SavePortsRepository, numberOfWorkerThreads int) SavePortsService {
+func NewSavePortsService(savePortsRepository repository.SavePortsRepository, numberOfWorkerThreads int, log *logrus.Logger) SavePortsService {
 	savePortsToDBChann := make(chan *savePortToDBParam)
 
 	// spawn the main Worker Threads, these are the threads that save the ports to the database
 	for i := 0; i < numberOfWorkerThreads; i++ {
 		// WORKER THREAD
+		log.Infof("Spwaning Worker Thread #%d", i+1)
 		go func() {
 			for savePortsDBParams := range savePortsToDBChann {
 				// using an anonymous function here, so that portsDBParams.wg.Done()
@@ -43,6 +47,7 @@ func NewSavePortsService(savePortsRepository repository.SavePortsRepository, num
 					port := savePortsDBParams.port
 					resultChann := savePortsDBParams.resultChann
 
+					log.Infof("Saving Port #%s To The Database", port.PrimaryUnloc)
 					resultChann <- savePortsRepository.SavePort(ctx, transaction, port)
 				}()
 			}
@@ -52,6 +57,7 @@ func NewSavePortsService(savePortsRepository repository.SavePortsRepository, num
 	return &savePortsService{
 		savePortsToDBChann:  savePortsToDBChann,
 		savePortsRepository: savePortsRepository,
+		log:                 log,
 	}
 }
 
@@ -122,6 +128,8 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 	for dbSaveError := range errorChann {
 
 		if dbSaveError != nil {
+			spp.log.Errorf("Error Occured, No Ports Were Saved To The Database: %s", err.Error())
+
 			// roll back the transaction
 			transactoin.Rollback()
 
@@ -135,7 +143,14 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 	}
 
 	// commit changes to the db
-	return transactoin.Commit()
+	err = transactoin.Commit()
+	if err != nil {
+		spp.log.Errorf("Error Occured, No Ports Were Saved To The Database: %s", err.Error())
+		return err
+	}
+
+	spp.log.Infof("All Ports Successfully Saved To The Database!!")
+	return nil
 }
 
 // convertPBPortToEntityPort converts the pb (protobuf) format for ports

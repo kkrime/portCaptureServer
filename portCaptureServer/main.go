@@ -1,8 +1,8 @@
 package main
 
 import (
-	"log"
 	"portCaptureServer/app"
+	"portCaptureServer/app/logger"
 )
 
 func run() error {
@@ -16,6 +16,6 @@ func run() error {
 
 func main() {
 	if err := run(); err != nil {
-		log.Fatal(err)
+		logger.CreateNewLogger().Fatal(err)
 	}
 }

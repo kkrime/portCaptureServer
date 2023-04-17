@@ -1,12 +1,12 @@
 package app
 
 import (
-	"log"
 	"net"
 	"os"
 	"os/signal"
 	"portCaptureServer/app/api/pb"
 	"portCaptureServer/app/config"
+	"portCaptureServer/app/logger"
 	"portCaptureServer/app/repository"
 	"portCaptureServer/app/server"
 	"portCaptureServer/app/service"
@@ -41,15 +41,18 @@ func NewApp() (App, error) {
 		return nil, err
 	}
 
+	log := logger.CreateNewLogger()
+
 	numberOfWorkerThreads := config.PortCapture.WorkerThreads
 
 	SavePortsRepository := repository.NewSavePortsRepository(db)
-	SavePortService := service.NewSavePortsService(SavePortsRepository, numberOfWorkerThreads)
+	SavePortService := service.NewSavePortsService(SavePortsRepository, numberOfWorkerThreads, log)
 	app.portCaptureServer = server.NewPortCaptureServer(SavePortService)
 	return app, nil
 }
 
 func (a *app) Run() error {
+	log := logger.CreateNewLogger()
 	listner, err := net.Listen("tcp", ":20000")
 	if err != nil {
 		return err
@@ -57,14 +60,14 @@ func (a *app) Run() error {
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterPortCaptureServiceServer(grpcServer, a.portCaptureServer)
-	log.Printf("server listening on %v", listner.Addr())
+	log.Infof("server listening on %v", listner.Addr())
 
 	// graceful shut down
 	sigCh := make(chan os.Signal)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		s := <-sigCh
-		log.Printf("got signal %v, attempting to GRACEFULLY shutdown", s)
+		log.Infof("got signal %v, attempting to GRACEFULLY shutdown", s)
 		gracefulShutdownChann := make(chan struct{})
 		go func() {
 			grpcServer.GracefulStop()
@@ -75,9 +78,9 @@ func (a *app) Run() error {
 		gracefulShutdownTimeoutChann := time.NewTimer(time.Second * 5)
 		select {
 		case <-gracefulShutdownChann:
-			log.Printf("Graceful shutdown complete")
+			log.Info("Graceful shutdown complete")
 		case <-gracefulShutdownTimeoutChann.C:
-			log.Printf("Graceful shutdown timed out, shutting down forefully")
+			log.Error("Graceful shutdown timed out, shutting down forefully")
 			grpcServer.Stop()
 		}
 	}()
