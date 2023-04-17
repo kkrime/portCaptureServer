@@ -11,12 +11,9 @@ func (s *PortCaptureServer) SavePorts(portsStream pb.PortCaptureService_SavePort
 	err := s.savePortsService.SavePorts(context.Background(), portsStream)
 	if err != nil {
 		response.Error = err.Error()
-		portsStream.SendAndClose(&response)
-		return nil
+		return portsStream.SendAndClose(&response)
 	}
 
 	response.Success = true
-	portsStream.SendAndClose(&response)
-
-	return nil
+	return portsStream.SendAndClose(&response)
 }
