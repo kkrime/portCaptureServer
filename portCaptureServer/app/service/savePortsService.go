@@ -128,7 +128,7 @@ func (spp *savePortsService) SavePorts(ctx context.Context, portStream PortsStre
 	for dbSaveError := range errorChann {
 
 		if dbSaveError != nil {
-			spp.log.Errorf("Error Occured, No Ports Were Saved To The Database: %s", err.Error())
+			spp.log.Errorf("Error Occured, No Ports Were Saved To The Database: %s", dbSaveError.Error())
 
 			// roll back the transaction
 			transactoin.Rollback()

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"portCaptureServer/app/api/pb"
+	"portCaptureServer/app/logger"
 	"portCaptureServer/app/repository"
 
 	repoMock "portCaptureServer/app/repository/mocks"
@@ -512,7 +513,7 @@ func (s *SavePortsServiceTestSuite) Testscan() {
 
 	for _, test := range tests {
 		s.T().Run(test.name, func(t2 *testing.T) {
-			service := NewSavePortsService(test.savePortsTransactionMock, 2)
+			service := NewSavePortsService(test.savePortsTransactionMock, 2, logger.CreateNewLogger())
 			err := service.SavePorts(context.Background(), test.portsStreamMock)
 
 			assert.Equal(s.T(), test.err, err)
