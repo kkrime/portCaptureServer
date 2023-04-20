@@ -18,7 +18,9 @@ This is the main program which saves the ports to the database<br>
 #### API interface
 For receiving the ports data **gRPC streams** are used, reasons:
 - for microservices communications, gRPC is very efficient and is widely supported
-- gRPC streams allow the service to control the flow of data and how much the service consumes at any one time. This is helpful for limiting resources.</br>**NOTE:** The default message size for gRPC is 4MB. I feel like this is a good enough size for most scenarios and most hardware portCaptureServer will be run on, so I did not include an option to set it in the config file.
+- gRPC streams allow the service to control the flow of data and how much the service consumes at any one time. This is helpful for limiting resources.
+
+**NOTE:** The default message size for gRPC is 4MB. I feel like this is a good enough size for most scenarios and most hardware portCaptureServer will be run on, so I did not include an option to set it in the config file.
 
 #### Worker Threads
 On start up a number of go routines are spawned, these are the worker threads that write the incoming port data to the database.
