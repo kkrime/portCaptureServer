@@ -64,7 +64,7 @@ func (a *app) Run() error {
 
 	// graceful shut down
 	sigCh := make(chan os.Signal)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 	go func() {
 		s := <-sigCh
 		log.Infof("got signal %v, attempting to GRACEFULLY shutdown", s)
