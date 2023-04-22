@@ -7,7 +7,7 @@ import (
 	"portCaptureServer/app/api/pb"
 	"portCaptureServer/app/config"
 	"portCaptureServer/app/logger"
-	"portCaptureServer/app/repository"
+	sqlRepository "portCaptureServer/app/repository/sql"
 	"portCaptureServer/app/server"
 	"portCaptureServer/app/service"
 	"syscall"
@@ -45,9 +45,14 @@ func NewApp() (App, error) {
 
 	numberOfWorkerThreads := config.PortCapture.WorkerThreads
 
-	SavePortsRepository := repository.NewSavePortsRepository(db)
-	SavePortService := service.NewSavePortsService(SavePortsRepository, numberOfWorkerThreads, log)
-	app.portCaptureServer = server.NewPortCaptureServer(SavePortService)
+	savePortsRepository := sqlRepository.NewSavePortsRepository(db)
+	savePortsServiceInstanceFactory := service.NewSavePortsServiceInstanceFactory(savePortsRepository, log)
+	savePortService := service.NewSavePortsService(
+		savePortsServiceInstanceFactory,
+		numberOfWorkerThreads,
+		log)
+	app.portCaptureServer = server.NewPortCaptureServer(savePortService)
+
 	return app, nil
 }
 

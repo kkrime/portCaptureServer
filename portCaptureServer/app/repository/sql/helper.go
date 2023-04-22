@@ -1,34 +1,16 @@
-package repository
+package sql
 
 import (
 	"context"
+	"database/sql"
 	"portCaptureServer/app/entity"
-
-	"github.com/jmoiron/sqlx"
 )
 
-type savePortsRepository struct {
-	db *sqlx.DB
+type db interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 }
 
-func NewSavePortsRepository(db *sqlx.DB) SavePortsRepository {
-
-	return &savePortsRepository{
-		db: db,
-	}
-}
-
-func (spp *savePortsRepository) StartTransaction() (Transaction, error) {
-	transaction, err := spp.db.Begin()
-	if err != nil {
-		return nil, err
-	}
-
-	return transaction, nil
-}
-
-func (spp *savePortsRepository) SavePort(ctx context.Context, transaction Transaction, port *entity.Port) error {
-
+func savePort(ctx context.Context, db db, port *entity.Port) error {
 	// 1. mark deleted any existing port with the same code,
 	// this is for auditing reasons
 	statement := `
@@ -40,7 +22,7 @@ func (spp *savePortsRepository) SavePort(ctx context.Context, transaction Transa
             primary_unloc = $1
         ;`
 
-	_, err := transaction.ExecContext(ctx, statement, port.PrimaryUnloc)
+	_, err := db.ExecContext(ctx, statement, port.PrimaryUnloc)
 	if err != nil {
 		return err
 	}
@@ -72,7 +54,7 @@ func (spp *savePortsRepository) SavePort(ctx context.Context, transaction Transa
         )
         ;`
 
-	_, err = transaction.ExecContext(ctx, statement,
+	_, err = db.ExecContext(ctx, statement,
 		port.PrimaryUnloc,
 		port.Name,
 		port.Code,
@@ -110,7 +92,7 @@ func (spp *savePortsRepository) SavePort(ctx context.Context, transaction Transa
                 $2
             )`
 
-		_, err = transaction.ExecContext(ctx, statement, port.PrimaryUnloc, alias.Name)
+		_, err = db.ExecContext(ctx, statement, port.PrimaryUnloc, alias.Name)
 		if err != nil {
 			return err
 		}
@@ -140,7 +122,7 @@ func (spp *savePortsRepository) SavePort(ctx context.Context, transaction Transa
                 $2
             )`
 
-		_, err = transaction.ExecContext(ctx, statement, port.PrimaryUnloc, region.Name)
+		_, err = db.ExecContext(ctx, statement, port.PrimaryUnloc, region.Name)
 		if err != nil {
 			return err
 		}
@@ -169,11 +151,12 @@ func (spp *savePortsRepository) SavePort(ctx context.Context, transaction Transa
                 $2
             )`
 
-		_, err = transaction.ExecContext(ctx, statement, port.PrimaryUnloc, unloc.Name)
+		_, err = db.ExecContext(ctx, statement, port.PrimaryUnloc, unloc.Name)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+
 }
