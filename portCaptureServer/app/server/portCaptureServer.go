@@ -7,10 +7,10 @@ import (
 
 type PortCaptureServer struct {
 	pb.UnimplementedPortCaptureServiceServer
-	savePortsService *service.SavePortsService
+	savePortsService service.SavePortsService
 }
 
-func NewPortCaptureServer(savePortsService *service.SavePortsService) *PortCaptureServer {
+func NewPortCaptureServer(savePortsService service.SavePortsService) *PortCaptureServer {
 	return &PortCaptureServer{
 		savePortsService: savePortsService,
 	}

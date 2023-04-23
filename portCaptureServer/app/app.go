@@ -10,6 +10,7 @@ import (
 	sqlRepository "portCaptureServer/app/repository/sql"
 	"portCaptureServer/app/server"
 	"portCaptureServer/app/service"
+	sqlService "portCaptureServer/app/service/sql"
 	"syscall"
 	"time"
 
@@ -45,10 +46,16 @@ func NewApp() (App, error) {
 
 	numberOfWorkerThreads := config.PortCapture.WorkerThreads
 
-	savePortsRepository := sqlRepository.NewSavePortsRepository(db)
-	savePortsServiceInstanceFactory := service.NewSavePortsServiceInstanceFactory(savePortsRepository, log)
+	savePortsRepository := sqlRepository.NewSQLDB(db)
+	savePortsServiceInstanceFactory := sqlService.NewSavePortsServiceSQLTransactionInstanceFactory(savePortsRepository, log)
+
+	savePortsServiceInstanceFactoryMap := map[service.SavePortsInstanceType]service.SavePortsServiceInstanceFactory{
+		sqlService.SQLTransactionDB: savePortsServiceInstanceFactory,
+		// sqlService.SQLDB:            sqlService.NewSavePortsServiceSQLInstanceFactory(savePortsRepository, log),
+	}
+
 	savePortService := service.NewSavePortsService(
-		savePortsServiceInstanceFactory,
+		savePortsServiceInstanceFactoryMap,
 		numberOfWorkerThreads,
 		log)
 	app.portCaptureServer = server.NewPortCaptureServer(savePortService)

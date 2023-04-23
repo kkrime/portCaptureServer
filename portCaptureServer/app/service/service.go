@@ -5,8 +5,14 @@ import (
 	"portCaptureServer/app/entity"
 )
 
+type SavePortsInstanceType string
+
+type SavePortsService interface {
+	NewSavePortsInstance(ctx context.Context, savePortsInstanceType SavePortsInstanceType) (SavePortsServiceInstance, error)
+}
+
 type SavePortsServiceInstanceFactory interface {
-	NewSavePortsInstance(ctx context.Context, savePortsToDBChann chan<- *savePortToDBParam) (SavePortsServiceInstance, error)
+	NewSavePortsInstance(ctx context.Context, savePortsToDBChann chan<- *SavePortToDBParam) (SavePortsServiceInstance, error)
 }
 
 type SavePortsServiceInstance interface {

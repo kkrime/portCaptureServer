@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"portCaptureServer/app/entity"
 	"portCaptureServer/app/repository"
 	"sync"
@@ -9,9 +10,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// savePortToDBParam is pased to the main worker threads
+// SavePortToDBParam is pased to the main worker threads
 // to write to the db
-type savePortToDBParam struct {
+type SavePortToDBParam struct {
 	ctx        context.Context
 	wg         *sync.WaitGroup
 	db         repository.SavePortsRepository
@@ -19,17 +20,33 @@ type savePortToDBParam struct {
 	errorChann chan<- error
 }
 
-type SavePortsService struct {
-	savePortsToDBChann              chan<- *savePortToDBParam
-	savePortsServiceInstanceFactory SavePortsServiceInstanceFactory
-	log                             *logrus.Logger
+func NewSavePortToDBParam(
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	db repository.SavePortsRepository,
+	errorChann chan<- error,
+) SavePortToDBParam {
+
+	return SavePortToDBParam{
+		ctx:        ctx,
+		wg:         wg,
+		db:         db,
+		errorChann: errorChann,
+	}
+
+}
+
+type savePortsService struct {
+	savePortsToDBChann                 chan<- *SavePortToDBParam
+	savePortsServiceInstanceFactoryMap map[SavePortsInstanceType]SavePortsServiceInstanceFactory
+	log                                *logrus.Logger
 }
 
 func NewSavePortsService(
-	savePortsServiceInstanceFactory SavePortsServiceInstanceFactory,
+	savePortsServiceInstanceFactoryMap map[SavePortsInstanceType]SavePortsServiceInstanceFactory,
 	numberOfWorkerThreads int,
-	log *logrus.Logger) *SavePortsService {
-	savePortsToDBChann := make(chan *savePortToDBParam)
+	log *logrus.Logger) *savePortsService {
+	savePortsToDBChann := make(chan *SavePortToDBParam)
 
 	// spawn the main Worker Threads, these are the threads that save the ports to the database
 	for i := 0; i < numberOfWorkerThreads; i++ {
@@ -60,13 +77,20 @@ func NewSavePortsService(
 		}()
 	}
 
-	return &SavePortsService{
-		savePortsToDBChann:              savePortsToDBChann,
-		savePortsServiceInstanceFactory: savePortsServiceInstanceFactory,
-		log:                             log,
+	return &savePortsService{
+		savePortsToDBChann:                 savePortsToDBChann,
+		savePortsServiceInstanceFactoryMap: savePortsServiceInstanceFactoryMap,
+		log:                                log,
 	}
 }
 
-func (sps *SavePortsService) NewSavePortsInstance(ctx context.Context) (SavePortsServiceInstance, error) {
-	return sps.savePortsServiceInstanceFactory.NewSavePortsInstance(ctx, sps.savePortsToDBChann)
+// TODO factories should not be pointers
+func (sps *savePortsService) NewSavePortsInstance(
+	ctx context.Context,
+	savePortsInstanceType SavePortsInstanceType) (SavePortsServiceInstance, error) {
+	savePortsInstanceFactory := sps.savePortsServiceInstanceFactoryMap[savePortsInstanceType]
+	if savePortsInstanceFactory == nil {
+		return nil, fmt.Errorf(canNotFindSavePortsInstanceFactoryError, savePortsInstanceType)
+	}
+	return savePortsInstanceFactory.NewSavePortsInstance(ctx, sps.savePortsToDBChann)
 }

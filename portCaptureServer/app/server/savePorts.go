@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"portCaptureServer/app/api/pb"
+	sqlService "portCaptureServer/app/service/sql"
 )
 
 func (s *PortCaptureServer) SavePorts(portsStream pb.PortCaptureService_SavePortsServer) (err error) {
@@ -18,8 +19,11 @@ func (s *PortCaptureServer) SavePorts(portsStream pb.PortCaptureService_SavePort
 	}()
 
 	// TODO double check this
-	savePortServiceInstance, err := s.savePortsService.NewSavePortsInstance(context.Background())
+	savePortServiceInstance, err := s.savePortsService.NewSavePortsInstance(
+		context.Background(),
+		sqlService.SQLTransactionDB)
 	if err != nil {
+		// TODO: forward err.Error() to Slack channel #HowTheHellCouldThisHavePossiblyHappend
 		return
 	}
 

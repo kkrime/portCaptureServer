@@ -4,10 +4,10 @@ import "portCaptureServer/app/repository"
 
 type DB interface {
 	repository.SavePortsRepository
-	StartTransaction() (TransactionDB, error)
+	StartTransaction() (SQLTransactionDB, error)
 }
 
-type TransactionDB interface {
+type SQLTransactionDB interface {
 	repository.SavePortsRepository
 	Commit() error
 	Rollback() error

@@ -10,6 +10,7 @@ type db interface {
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 }
 
+// common code
 func savePort(ctx context.Context, db db, port *entity.Port) error {
 	// 1. mark deleted any existing port with the same code,
 	// this is for auditing reasons

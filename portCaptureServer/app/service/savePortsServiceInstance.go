@@ -9,11 +9,11 @@ import (
 )
 
 type savePortsServiceInstance struct {
-	savePortsToDBChann chan<- *savePortToDBParam
+	savePortsToDBChann chan<- *SavePortToDBParam
 	// NOTE savePortToDBParam is added to keep things tidy/organized
 	// and for convience when sending to savePortsToDBChann
 	// (we can just copy savePortToDBParam and pass in the address of the copy)
-	savePortToDBParam savePortToDBParam
+	savePortToDBParam SavePortToDBParam
 	cancelCtx         context.CancelFunc
 	wg                *sync.WaitGroup
 	errorChann        chan error
@@ -22,28 +22,27 @@ type savePortsServiceInstance struct {
 	log               *logrus.Logger
 }
 
-// func newSavePortsServiceInstance(ctx context.Context,
-// 	savePortsToDBChann chan<- *savePortToDBParam,
-// 	savePortToDBParam savePortToDBParam,
-// 	cancelCtx context.CancelFunc,
-// 	wg *sync.WaitGroup,
-// 	db repository.SavePortsRepository,
-// 	errorChann chan error,
-// 	finalizeDB func() error,
-// 	cancelDB func() error,
-// 	log *logrus.Logger,
-// ) SavePortsServiceInstance {
-// 	return &savePortsServiceInstance{
-// 		savePortsToDBChann: savePortsToDBChann,
-// 		savePortToDBParam:  savePortToDBParam,
-// 		cancelCtx:          cancelCtx,
-// 		wg:                 wg,
-// 		errorChann:         errorChann,
-// 		finalizeDB:         finalizeDB,
-// 		cancelDB:           cancelDB,
-// 		log:                log,
-// 	}
-// }
+func NewSavePortsServiceInstance(
+	savePortsToDBChann chan<- *SavePortToDBParam,
+	savePortToDBParam SavePortToDBParam,
+	wg *sync.WaitGroup,
+	cancelCtx context.CancelFunc,
+	errorChann chan error,
+	finalizeDB func() error,
+	cancelDB func() error,
+	log *logrus.Logger,
+) SavePortsServiceInstance {
+	return &savePortsServiceInstance{
+		savePortsToDBChann: savePortsToDBChann,
+		savePortToDBParam:  savePortToDBParam,
+		cancelCtx:          cancelCtx,
+		wg:                 wg,
+		errorChann:         errorChann,
+		finalizeDB:         finalizeDB,
+		cancelDB:           cancelDB,
+		log:                log,
+	}
+}
 
 func (spsi *savePortsServiceInstance) SavePort(port *entity.Port) error {
 	select {
