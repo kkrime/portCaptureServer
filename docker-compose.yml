@@ -9,7 +9,8 @@ services:
       db:
         condition: service_healthy
     environment:
-      CONFIG_FILE_PATH: /go/src/portCaptureServer/config/docker_compose_config.yaml
+      # CONFIG_FILE_PATH: /go/src/portCaptureServer/config/docker_compose_config.yaml
+      CONFIG_FILE_PATH: /app/config.yaml
 
   port_capture_server_translation:
     build:
