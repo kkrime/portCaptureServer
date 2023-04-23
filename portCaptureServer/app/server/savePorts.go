@@ -1,33 +1,53 @@
 package server
 
 import (
-	"context"
-	"portCaptureServer/app/adapter"
+	"io"
 	"portCaptureServer/app/api/pb"
 	sqlService "portCaptureServer/app/service/sql"
 )
 
-func (s *PortCaptureServer) SavePorts(portsStream pb.PortCaptureService_SavePortsServer) error {
+func (s *PortCaptureServer) SavePorts(portsStream pb.PortCaptureService_SavePortsServer) (err error) {
 	response := pb.PortCaptureServiceResponse{}
+	defer func() {
+		if err != nil {
+			response.Error = err.Error()
+		} else {
+			response.Success = true
+		}
+		err = portsStream.SendAndClose(&response)
+	}()
 
 	savePortServiceInstance, err := s.savePortsServiceProvider.NewSavePortsInstance(
-		context.Background(),
+		s.masterCtx,
 		sqlService.SQLTransactionDB)
-
 	if err != nil {
 		// TODO: forward err.Error() to Slack channel #HowTheHellCouldThisHavePossiblyHappend
-		response.Error = err.Error()
-		return portsStream.SendAndClose(&response)
+		return
 	}
 
-	portsStreamAdapter := adapter.NewPortsStreamAdapter(portsStream)
+	for {
+		// read in ports from request
+		var port *pb.Port
+		port, err = portsStream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return
+		}
 
-	err = savePortServiceInstance.SavePort(portsStreamAdapter)
+		portEntity := convertPBPortToEntityPort(port)
+
+		err = savePortServiceInstance.SavePort(portEntity)
+		if err != nil {
+			return
+		}
+	}
+
+	err = savePortServiceInstance.Finalize()
 	if err != nil {
-		response.Error = err.Error()
-		return portsStream.SendAndClose(&response)
+		return
 	}
 
-	response.Success = true
-	return portsStream.SendAndClose(&response)
+	return
 }

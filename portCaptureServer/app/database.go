@@ -5,6 +5,7 @@ import (
 	"portCaptureServer/app/config"
 	"portCaptureServer/app/logger"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	sqldblogger "github.com/simukti/sqldb-logger"
 	"github.com/simukti/sqldb-logger/logadapter/logrusadapter"
