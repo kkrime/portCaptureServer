@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"io"
 	"portCaptureServer/app/api/pb"
 	sqlService "portCaptureServer/app/service/sql"
@@ -19,7 +18,7 @@ func (s *PortCaptureServer) SavePorts(portsStream pb.PortCaptureService_SavePort
 	}()
 
 	savePortServiceInstance, err := s.savePortsServiceProvider.NewSavePortsInstance(
-		context.Background(),
+		s.masterCtx,
 		sqlService.SQLTransactionDB)
 	if err != nil {
 		// TODO: forward err.Error() to Slack channel #HowTheHellCouldThisHavePossiblyHappend

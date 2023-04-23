@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"net"
 	"os"
 	"os/signal"
@@ -16,8 +17,6 @@ import (
 
 	"gitlab.com/avarf/getenvs"
 	"google.golang.org/grpc"
-
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type App interface {
@@ -26,6 +25,7 @@ type App interface {
 
 type app struct {
 	portCaptureServer *server.PortCaptureServer
+	cancelCtx         context.CancelFunc
 }
 
 func NewApp() (App, error) {
@@ -58,7 +58,11 @@ func NewApp() (App, error) {
 		savePortsServiceInstanceFactoryMap,
 		numberOfWorkerThreads,
 		log)
-	app.portCaptureServer = server.NewPortCaptureServer(savePortServiceProvider)
+
+	masterCtx, cancelCtx := context.WithCancel(context.Background())
+	app.cancelCtx = cancelCtx
+
+	app.portCaptureServer = server.NewPortCaptureServer(savePortServiceProvider, masterCtx)
 
 	return app, nil
 }
@@ -79,6 +83,7 @@ func (a *app) Run() error {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 	go func() {
 		s := <-sigCh
+		a.cancelCtx()
 		log.Infof("got signal %v, attempting to GRACEFULLY shutdown", s)
 		gracefulShutdownChann := make(chan struct{})
 		go func() {
@@ -86,7 +91,7 @@ func (a *app) Run() error {
 			gracefulShutdownChann <- struct{}{}
 		}()
 
-		// create a timeout of 5 seconds
+		// create a timeout
 		gracefulShutdownTimeoutChann := time.NewTimer(time.Second * 5)
 		select {
 		case <-gracefulShutdownChann:
