@@ -13,25 +13,25 @@ import (
 // SavePortToDBParam is pased to the main worker threads
 // to write to the db
 type SavePortToDBParam struct {
-	ctx        context.Context
-	wg         *sync.WaitGroup
-	db         repository.SavePortsRepository
-	port       *entity.Port
-	errorChann chan<- error
+	ctx         context.Context
+	wg          *sync.WaitGroup
+	db          repository.SavePortsRepository
+	port        *entity.Port
+	resultChann chan<- error
 }
 
 func NewSavePortToDBParam(
 	ctx context.Context,
 	wg *sync.WaitGroup,
 	db repository.SavePortsRepository,
-	errorChann chan<- error,
+	resultChann chan<- error,
 ) SavePortToDBParam {
 
 	return SavePortToDBParam{
-		ctx:        ctx,
-		wg:         wg,
-		db:         db,
-		errorChann: errorChann,
+		ctx:         ctx,
+		wg:          wg,
+		db:          db,
+		resultChann: resultChann,
 	}
 
 }
@@ -62,7 +62,7 @@ func NewSavePortsService(
 
 					ctx := savePortsDBParams.ctx
 					port := savePortsDBParams.port
-					resultChann := savePortsDBParams.errorChann
+					resultChann := savePortsDBParams.resultChann
 
 					db := savePortsDBParams.db
 

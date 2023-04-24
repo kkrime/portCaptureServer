@@ -12,7 +12,9 @@ type SavePortsService interface {
 }
 
 type SavePortsServiceInstanceFactory interface {
-	NewSavePortsInstance(ctx context.Context, savePortsToDBChann chan<- *SavePortToDBParam) (SavePortsServiceInstance, error)
+	NewSavePortsInstance(
+		ctx context.Context,
+		savePortsToDBChann chan<- *SavePortToDBParam) (SavePortsServiceInstance, error)
 }
 
 type SavePortsServiceInstance interface {

@@ -31,6 +31,7 @@ func (spsif *savePortsServiceSQLTransactionInstanceFactory) NewSavePortsInstance
 ) (service.SavePortsServiceInstance, error) {
 	var wg sync.WaitGroup
 	errorChann := make(chan error, 1)
+	resultChann := make(chan error)
 
 	// TODO compile time check
 	db := spsif.savePortsRepository.(sql.DB)
@@ -41,20 +42,36 @@ func (spsif *savePortsServiceSQLTransactionInstanceFactory) NewSavePortsInstance
 
 	ctx, cancelCtx := context.WithCancel(ctx)
 
-	// return &service.savePortsServiceInstance{
+	go func() {
+		// only send the first error
+		firstErrorOccured := false
+		for err := range resultChann {
+			if !firstErrorOccured {
+				firstErrorOccured = true
+				// cancel context to stop any db io
+				cancelCtx()
+				// if any errors on saving the ports to the db, send it to
+				// errorChann
+				errorChann <- err
+			}
+		}
+		close(errorChann)
+	}()
+
 	return service.NewSavePortsServiceInstance(
 		savePortsToDBChann,
 		service.NewSavePortToDBParam(
 			ctx,
 			&wg,
-			db,
-			errorChann,
+			tx,
+			resultChann,
 		),
 		&wg,
-		cancelCtx,
 		errorChann,
+		resultChann,
 		tx.Commit,
 		tx.Rollback,
 		spsif.log,
 	), nil
+
 }

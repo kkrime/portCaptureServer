@@ -1,7 +1,7 @@
 package service
 
 import (
-	"context"
+	"fmt"
 	"portCaptureServer/app/entity"
 	"sync"
 
@@ -14,9 +14,9 @@ type savePortsServiceInstance struct {
 	// and for convience when sending to savePortsToDBChann
 	// (we can just copy savePortToDBParam and pass in the address of the copy)
 	savePortToDBParam SavePortToDBParam
-	cancelCtx         context.CancelFunc
 	wg                *sync.WaitGroup
 	errorChann        chan error
+	resultChann       chan error
 	finalizeDB        func() error
 	cancelDB          func() error
 	log               *logrus.Logger
@@ -26,8 +26,8 @@ func NewSavePortsServiceInstance(
 	savePortsToDBChann chan<- *SavePortToDBParam,
 	savePortToDBParam SavePortToDBParam,
 	wg *sync.WaitGroup,
-	cancelCtx context.CancelFunc,
 	errorChann chan error,
+	resultChann chan error,
 	finalizeDB func() error,
 	cancelDB func() error,
 	log *logrus.Logger,
@@ -35,9 +35,9 @@ func NewSavePortsServiceInstance(
 	return &savePortsServiceInstance{
 		savePortsToDBChann: savePortsToDBChann,
 		savePortToDBParam:  savePortToDBParam,
-		cancelCtx:          cancelCtx,
 		wg:                 wg,
 		errorChann:         errorChann,
+		resultChann:        resultChann,
 		finalizeDB:         finalizeDB,
 		cancelDB:           cancelDB,
 		log:                log,
@@ -50,20 +50,15 @@ func (spsi *savePortsServiceInstance) SavePort(port *entity.Port) error {
 	case err := <-spsi.errorChann:
 		spsi.log.Errorf("Error Occured, No Ports Were Saved To The Database: %s", err.Error())
 
-		// cancel all database io
-		spsi.cancelCtx()
-
 		spsi.wg.Wait()
-		close(spsi.errorChann)
+		close(spsi.resultChann)
 
-		// drain the errorChann
-		for len(spsi.errorChann) > 0 {
-			<-spsi.errorChann
-		}
-
-		// roll back the transaction
+		// any cancel procedures
 		if spsi.cancelDB != nil {
-			spsi.cancelDB()
+			cancelDBErr := spsi.cancelDB()
+			if cancelDBErr != nil {
+				err = fmt.Errorf("%v: %w", err, cancelDBErr)
+			}
 		}
 
 		return err
@@ -80,21 +75,19 @@ func (spsi *savePortsServiceInstance) SavePort(port *entity.Port) error {
 
 func (spsi *savePortsServiceInstance) Finalize() error {
 	spsi.wg.Wait()
-	close(spsi.errorChann)
+	close(spsi.resultChann)
 
 	for err := range spsi.errorChann {
 
 		if err != nil {
 			spsi.log.Errorf("Error Occured, No Ports Were Saved To The Database: %s", err.Error())
 
-			// drain the errorChann
-			for len(spsi.errorChann) > 0 {
-				<-spsi.errorChann
-			}
-
 			// any cancel procedures
 			if spsi.cancelDB != nil {
-				spsi.cancelDB()
+				cancelDBErr := spsi.cancelDB()
+				if cancelDBErr != nil {
+					err = fmt.Errorf("%v: %w", err, cancelDBErr)
+				}
 			}
 
 			return err
@@ -103,7 +96,10 @@ func (spsi *savePortsServiceInstance) Finalize() error {
 
 	// any finalization procedures
 	if spsi.finalizeDB != nil {
-		spsi.finalizeDB()
+		err := spsi.finalizeDB()
+		if err != nil {
+			return err
+		}
 	}
 
 	spsi.log.Infof("All Ports Successfully Saved To The Database!!")
