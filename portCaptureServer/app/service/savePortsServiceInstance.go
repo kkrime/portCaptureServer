@@ -1,8 +1,10 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"portCaptureServer/app/entity"
+	"portCaptureServer/app/repository"
 	"sync"
 
 	"github.com/sirupsen/logrus"
@@ -22,7 +24,53 @@ type savePortsServiceInstance struct {
 	log               *logrus.Logger
 }
 
-func NewSavePortsServiceInstance(
+func InitalizeNewSavePortsServiceInstance(
+	ctx context.Context,
+	savePortsToDBChann chan<- *SavePortToDBParam,
+	savePortsRepository repository.SavePortsRepository,
+	finalizeDB func() error,
+	cancelDB func() error,
+	log *logrus.Logger,
+) SavePortsServiceInstance {
+	var wg sync.WaitGroup
+	errorChann := make(chan error, 1)
+	resultChann := make(chan error)
+
+	ctx, cancelCtx := context.WithCancel(ctx)
+	go func() {
+		// only send the first error
+		firstErrorOccured := false
+		for err := range resultChann {
+			if !firstErrorOccured {
+				firstErrorOccured = true
+				// cancel context to stop any db io
+				cancelCtx()
+				// if any errors on saving the ports to the db, send it to
+				// errorChann
+				errorChann <- err
+			}
+		}
+		close(errorChann)
+	}()
+
+	return newSavePortsServiceInstance(
+		savePortsToDBChann,
+		NewSavePortToDBParam(
+			ctx,
+			&wg,
+			savePortsRepository,
+			resultChann,
+		),
+		&wg,
+		errorChann,
+		resultChann,
+		finalizeDB,
+		cancelDB,
+		log,
+	)
+}
+
+func newSavePortsServiceInstance(
 	savePortsToDBChann chan<- *SavePortToDBParam,
 	savePortToDBParam SavePortToDBParam,
 	wg *sync.WaitGroup,
