@@ -7,7 +7,7 @@ import fileHelper
 import databaseHelper
 import json
 
-dockerHelper.startDocker()
+# dockerHelper.startDocker()
 databaseHelper.connect()
 
 testDataPath = "./testData/"
@@ -31,7 +31,7 @@ def test_codeTooLong():
     assert res['success'] == False
     assert re.search("ERROR: value too long for type",res['error'])
 
-    # check that noen of the ports were written to the database
+    # check that none of the ports were written to the database
     jsonData = json.loads(data)
     for primary_unloc in jsonData:
         res = databaseHelper.runQueryWithResult(
@@ -39,8 +39,37 @@ def test_codeTooLong():
         ' and deleted_at is NULL')
         assert res == None
 
-# def test_badJSON():
-#     data = fileHelper.openFile(testDataPath + "badJSON.json")
-#     res = restHelper.post("localhost", 8080, "/v1/sendports", data)
-#     assert res['success'] == False
-#     assert re.search("invalid character ",res['error'])
+def test_badJSON():
+    badJSONUncloc = "badJSON"
+
+    data = """
+        {{
+          "{}": {{
+            "name": "Ajman",         bad JSON
+            "city": "Ajman",
+            "country": "United Arab Emirates",
+            "alias": [],
+            "regions": [],
+            "coordinates": [
+              55.5136433,
+              25.4052165
+            ],
+            "province": "Ajman",
+            "timezone": "Asia/Dubai",
+            "unlocs": [
+              "AEAJM"
+            ],
+            "code": "52000"
+          }},
+        }}
+    """.format(badJSONUncloc)
+
+    res = restHelper.post("localhost", 8080, "/v1/sendports", data)
+    assert res['success'] == False
+    assert re.search("invalid character ",res['error'])
+
+    # check that the port was not written to the database
+    res = databaseHelper.runQueryWithResult(
+    'SELECT primary_unloc FROM ports WHERE primary_unloc=\'' + badJSONUncloc +'\'' +
+    ' and deleted_at is NULL')
+    assert res == None
