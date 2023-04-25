@@ -1,4 +1,5 @@
 syntax = "proto3";
+import "google/protobuf/empty.proto";
 
 package pb;
 
@@ -6,6 +7,7 @@ option go_package = "portCaptureServer/app/server/api/pb";
 
 service PortCaptureService {
   rpc  SavePorts(stream Port) returns (PortCaptureServiceResponse) {}
+  rpc  HealthCheck(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 }
 
 message PortCaptureServiceResponse {

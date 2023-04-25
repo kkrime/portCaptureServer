@@ -61,6 +61,8 @@ func (a *app) startWebServer() error {
 	router.Use(gin.Logger())
 	router.Use(gin.LoggerWithConfig(requestid.GetLoggerConfig(nil, nil, nil)))
 
+	router.GET("healthcheck", sendPortsController.HealthCheck)
+
 	v1 := router.Group("v1")
 
 	sendPorts := v1.Group("sendports")

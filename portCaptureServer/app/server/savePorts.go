@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"portCaptureServer/app/adapter"
 	"portCaptureServer/app/api/pb"
 	sqlService "portCaptureServer/app/service/sql"
@@ -11,7 +10,7 @@ func (s *PortCaptureServer) SavePorts(portsStream pb.PortCaptureService_SavePort
 	response := pb.PortCaptureServiceResponse{}
 
 	savePortServiceInstance, err := s.savePortsServiceProvider.NewSavePortsInstance(
-		context.Background(),
+		s.masterCtx,
 		sqlService.SQLTransactionDB)
 
 	if err != nil {
