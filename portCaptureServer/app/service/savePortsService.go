@@ -36,16 +36,16 @@ func NewSavePortToDBParam(
 
 }
 
-type savePortsService struct {
+type savePortsServiceProvider struct {
 	savePortsToDBChann                 chan<- *SavePortToDBParam
 	savePortsServiceInstanceFactoryMap map[SavePortsInstanceType]SavePortsServiceInstanceFactory
 	log                                *logrus.Logger
 }
 
-func NewSavePortsService(
+func NewSavePortsServiceProvider(
 	savePortsServiceInstanceFactoryMap map[SavePortsInstanceType]SavePortsServiceInstanceFactory,
 	numberOfWorkerThreads int,
-	log *logrus.Logger) *savePortsService {
+	log *logrus.Logger) *savePortsServiceProvider {
 	savePortsToDBChann := make(chan *SavePortToDBParam)
 
 	// spawn the main Worker Threads, these are the threads that save the ports to the database
@@ -77,20 +77,19 @@ func NewSavePortsService(
 		}()
 	}
 
-	return &savePortsService{
+	return &savePortsServiceProvider{
 		savePortsToDBChann:                 savePortsToDBChann,
 		savePortsServiceInstanceFactoryMap: savePortsServiceInstanceFactoryMap,
 		log:                                log,
 	}
 }
 
-// TODO factories should not be pointers
-func (sps *savePortsService) NewSavePortsInstance(
+func (spsp *savePortsServiceProvider) NewSavePortsInstance(
 	ctx context.Context,
 	savePortsInstanceType SavePortsInstanceType) (SavePortsServiceInstance, error) {
-	savePortsInstanceFactory := sps.savePortsServiceInstanceFactoryMap[savePortsInstanceType]
+	savePortsInstanceFactory := spsp.savePortsServiceInstanceFactoryMap[savePortsInstanceType]
 	if savePortsInstanceFactory == nil {
 		return nil, fmt.Errorf(canNotFindSavePortsInstanceFactoryError, savePortsInstanceType)
 	}
-	return savePortsInstanceFactory.NewSavePortsInstance(ctx, sps.savePortsToDBChann)
+	return savePortsInstanceFactory.NewSavePortsInstance(ctx, spsp.savePortsToDBChann)
 }

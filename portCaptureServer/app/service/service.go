@@ -7,7 +7,7 @@ import (
 
 type SavePortsInstanceType string
 
-type SavePortsService interface {
+type SavePortsServiceProvider interface {
 	NewSavePortsInstance(ctx context.Context, savePortsInstanceType SavePortsInstanceType) (SavePortsServiceInstance, error)
 }
 

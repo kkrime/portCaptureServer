@@ -18,8 +18,7 @@ func (s *PortCaptureServer) SavePorts(portsStream pb.PortCaptureService_SavePort
 		err = portsStream.SendAndClose(&response)
 	}()
 
-	// TODO double check this
-	savePortServiceInstance, err := s.savePortsService.NewSavePortsInstance(
+	savePortServiceInstance, err := s.savePortsServiceProvider.NewSavePortsInstance(
 		context.Background(),
 		sqlService.SQLTransactionDB)
 	if err != nil {

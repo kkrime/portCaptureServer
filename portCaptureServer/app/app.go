@@ -54,11 +54,11 @@ func NewApp() (App, error) {
 		// sqlService.SQLDB:            sqlService.NewSavePortsServiceSQLInstanceFactory(savePortsRepository, log),
 	}
 
-	savePortService := service.NewSavePortsService(
+	savePortServiceProvider := service.NewSavePortsServiceProvider(
 		savePortsServiceInstanceFactoryMap,
 		numberOfWorkerThreads,
 		log)
-	app.portCaptureServer = server.NewPortCaptureServer(savePortService)
+	app.portCaptureServer = server.NewPortCaptureServer(savePortServiceProvider)
 
 	return app, nil
 }
