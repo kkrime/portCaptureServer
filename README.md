@@ -81,3 +81,6 @@ To run live testing, make sure docker-compose is running (from step 3 above), th
 #### Unit testing
 I made sure to unit test the most critical parts of this service:</br>
 From `portCaptureServer/app/service/` run `go test .`
+#### Integration testing
+You will need to have `python3` and `pytest` installed:</br>
+From `integrationTests` run `sudo python3 -m pytest -s -v`
