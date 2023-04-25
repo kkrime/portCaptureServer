@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"portCaptureServer/app/entity"
+	"portCaptureServer/app/adapter"
 )
 
 type SavePortsInstanceType string
@@ -18,6 +18,5 @@ type SavePortsServiceInstanceFactory interface {
 }
 
 type SavePortsServiceInstance interface {
-	SavePort(port *entity.Port) error
-	Finalize() error
+	SavePort(portsStream adapter.PortsStream) error
 }

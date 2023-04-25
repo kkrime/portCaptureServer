@@ -1,4 +1,4 @@
-package server
+package adapter
 
 import (
 	"portCaptureServer/app/api/pb"

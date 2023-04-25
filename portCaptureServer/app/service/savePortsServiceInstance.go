@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"io"
+	"portCaptureServer/app/adapter"
 	"portCaptureServer/app/entity"
 	"portCaptureServer/app/repository"
 	"sync"
@@ -92,7 +94,32 @@ func newSavePortsServiceInstance(
 	}
 }
 
-func (spsi *savePortsServiceInstance) SavePort(port *entity.Port) error {
+func (spsi *savePortsServiceInstance) SavePort(portsStream adapter.PortsStream) error {
+
+	for {
+		// read in ports from request
+		port, err := portsStream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		err = spsi.savePort(port)
+		if err != nil {
+			return err
+		}
+	}
+
+	err := spsi.finalize()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (spsi *savePortsServiceInstance) savePort(port *entity.Port) error {
 	select {
 	// check if any errors occured
 	case err := <-spsi.errorChann:
@@ -121,7 +148,7 @@ func (spsi *savePortsServiceInstance) SavePort(port *entity.Port) error {
 	}
 }
 
-func (spsi *savePortsServiceInstance) Finalize() error {
+func (spsi *savePortsServiceInstance) finalize() error {
 	spsi.wg.Wait()
 	close(spsi.resultChann)
 
