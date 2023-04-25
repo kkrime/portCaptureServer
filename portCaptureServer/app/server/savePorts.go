@@ -16,11 +16,14 @@ func (s *PortCaptureServer) SavePorts(portsStream pb.PortCaptureService_SavePort
 
 	if err != nil {
 		// TODO: forward err.Error() to Slack channel #HowTheHellCouldThisHavePossiblyHappend
-		response.Error = err.Error()
-		return portsStream.SendAndClose(&response)
+		return err
 	}
 
 	portsStreamAdapter := adapter.NewPortsStreamAdapter(portsStream)
+	if err != nil {
+		response.Error = err.Error()
+		return portsStream.SendAndClose(&response)
+	}
 
 	err = savePortServiceInstance.SavePort(portsStreamAdapter)
 	if err != nil {
