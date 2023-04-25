@@ -1,6 +1,8 @@
+import requests
 import subprocess
 import time
 import re
+
 # Docker helpers
 def startDocker():
 
@@ -34,9 +36,11 @@ def startDocker():
 
         containersRunning = allContainersRunning()
 
+    print("All containers started")
+    serviceRunning()
+
 def allContainersRunning():
         out = subprocess.run(["docker", "container", "ps"], stdout=subprocess.PIPE)
-        print(out.stdout)
 
         port_capture_server_translation_running = re.search(".*port_capture_server_translation.*", str(out.stdout))
         port_capture_server_running = re.search(".*port_capture_server .*", str(out.stdout))
@@ -44,3 +48,31 @@ def allContainersRunning():
         if port_capture_server_running == True and port_capture_server_running == True:
             return True
         return False
+
+def serviceRunning():
+    status = getStatus()
+    print("Waiting for the service to start")
+
+    start_time = time.time()
+
+    while status != 200:
+
+        time.sleep(1)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+
+        if elapsed_time > 3*60:
+            print("service not started")
+            exit(-1)
+
+        status = getStatus()
+
+    print("Service started")
+
+def getStatus():
+    try:
+        request = requests.get( "http://localhost" + ':' "8080" + "/healthcheck" )
+        return request.status_code
+    except:
+        return 501
+

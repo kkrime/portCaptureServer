@@ -7,7 +7,7 @@ import fileHelper
 import databaseHelper
 import json
 
-# dockerHelper.startDocker()
+dockerHelper.startDocker()
 databaseHelper.connect()
 
 testDataPath = "./testData/"
