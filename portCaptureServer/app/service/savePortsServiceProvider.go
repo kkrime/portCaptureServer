@@ -38,7 +38,6 @@ func NewSavePortToDBParam(
 
 type savePortsServiceProvider struct {
 	savePortsToDBChann                 chan<- *SavePortToDBParam
-	numberOfWorkerThreads              int
 	savePortsServiceInstanceFactoryMap map[SavePortsInstanceType]SavePortsServiceInstanceFactory
 	log                                *logrus.Logger
 }
@@ -80,7 +79,6 @@ func NewSavePortsServiceProvider(
 
 	return &savePortsServiceProvider{
 		savePortsToDBChann:                 savePortsToDBChann,
-		numberOfWorkerThreads:              numberOfWorkerThreads,
 		savePortsServiceInstanceFactoryMap: savePortsServiceInstanceFactoryMap,
 		log:                                log,
 	}
