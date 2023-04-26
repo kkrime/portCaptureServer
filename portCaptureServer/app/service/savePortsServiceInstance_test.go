@@ -32,6 +32,8 @@ func (s *SavePortsServiceInstanceTestSuite) TestSendPortFinalize() {
 		name                    string
 		portsStreamMock         adapter.PortsStream
 		savePortsRepositoryMock repository.SavePortsRepository
+		finalizeDB              func() error
+		cancelDB                func() error
 		err                     error
 	}{
 		{
@@ -212,6 +214,160 @@ func (s *SavePortsServiceInstanceTestSuite) TestSendPortFinalize() {
 
 			err: fmt.Errorf("SavePortsRepository.SavePort() error"),
 		},
+		{
+			name: "finalizeDB() fails",
+
+			portsStreamMock: func() adapter.PortsStream {
+				portStreamMock := adapterMock.NewPortsStream(s.T())
+				portStreamMock.On(
+					"Recv",
+				).
+					Return(
+						&entity.Port{},
+						nil,
+					).Once()
+
+				portStreamMock.On(
+					"Recv",
+				).
+					Return(
+						nil,
+						io.EOF,
+					)
+				return portStreamMock
+			}(),
+
+			savePortsRepositoryMock: func() repository.SavePortsRepository {
+				repositoryMock := repoMock.NewSavePortsRepository(s.T())
+
+				repositoryMock.On(
+					"SavePort",
+					mock.Anything,
+					mock.Anything,
+				).
+					Return(
+						nil,
+					).
+					Once()
+
+				return repositoryMock
+			}(),
+
+			finalizeDB: func() error {
+				return fmt.Errorf("finalizeDB() error")
+			},
+
+			err: fmt.Errorf("finalizeDB() error"),
+		},
+		{
+			name: "Recv() fails + cancelDB() fails",
+
+			portsStreamMock: func() adapter.PortsStream {
+				portStreamMock := adapterMock.NewPortsStream(s.T())
+
+				portStreamMock.On(
+					"Recv",
+				).
+					Return(
+						&entity.Port{},
+						nil,
+					).Once()
+
+				portStreamMock.On(
+					"Recv",
+				).
+					Return(
+						nil,
+						fmt.Errorf("Recv() error"),
+					).Once()
+
+				portStreamMock.On(
+					"Recv",
+				).
+					Return(
+						nil,
+						io.EOF,
+					)
+
+				return portStreamMock
+			}(),
+
+			savePortsRepositoryMock: func() repository.SavePortsRepository {
+				repositoryMock := repoMock.NewSavePortsRepository(s.T())
+
+				repositoryMock.On(
+					"SavePort",
+					mock.Anything,
+					mock.Anything,
+				).
+					Return(
+						nil,
+					).
+					Once()
+
+				return repositoryMock
+			}(),
+
+			cancelDB: func() error {
+				return fmt.Errorf("cancelDB() error")
+			},
+
+			err: func() error {
+				err1 := fmt.Errorf("Recv() error")
+				err2 := fmt.Errorf("cancelDB() error")
+				return fmt.Errorf("%v: %w", err1, err2)
+			}(),
+		},
+		{
+			name: "Recv() fails + cancelDB() fails",
+
+			portsStreamMock: func() adapter.PortsStream {
+				portStreamMock := adapterMock.NewPortsStream(s.T())
+				portStreamMock.On(
+					"Recv",
+				).
+					Return(
+						&entity.Port{},
+						nil,
+					).Once()
+
+				portStreamMock.On(
+					"Recv",
+				).
+					Return(
+						nil,
+						io.EOF,
+					)
+
+				return portStreamMock
+			}(),
+
+			savePortsRepositoryMock: func() repository.SavePortsRepository {
+				repositoryMock := repoMock.NewSavePortsRepository(s.T())
+
+				repositoryMock.On(
+					"SavePort",
+					mock.Anything,
+					mock.Anything,
+				).
+					Return(
+						fmt.Errorf("repository.Recv() error"),
+					).
+					Once()
+
+				return repositoryMock
+			}(),
+
+			cancelDB: func() error {
+				return fmt.Errorf("cancelDB() error")
+			},
+
+			err: func() error {
+				err1 := fmt.Errorf("repository.Recv() error")
+				err2 := fmt.Errorf("cancelDB() error")
+				return fmt.Errorf("%v: %w", err1, err2)
+			}(),
+		},
 	}
 
 	for _, test := range tests {
@@ -225,12 +381,12 @@ func (s *SavePortsServiceInstanceTestSuite) TestSendPortFinalize() {
 				context.TODO(),
 				service.savePortsToDBChann,
 				test.savePortsRepositoryMock,
-				nil,
-				nil,
+				test.finalizeDB,
+				test.cancelDB,
 				logger.CreateNewLogger(),
 			)
 
-			err := savePortsServiceInstance.SavePort(test.portsStreamMock)
+			err := savePortsServiceInstance.SavePorts(test.portsStreamMock)
 
 			assert.Equal(s.T(), test.err, err)
 		})
