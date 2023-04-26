@@ -94,7 +94,7 @@ func newSavePortsServiceInstance(
 	}
 }
 
-func (spsi *savePortsServiceInstance) SavePort(portsStream adapter.PortsStream) error {
+func (spsi *savePortsServiceInstance) SavePorts(portsStream adapter.PortsStream) error {
 
 	for {
 		// read in ports from request
@@ -103,7 +103,10 @@ func (spsi *savePortsServiceInstance) SavePort(portsStream adapter.PortsStream) 
 			break
 		}
 		if err != nil {
-			return err
+			// send to resultChann to cancel context
+			//  and stop all database io
+			spsi.resultChann <- err
+			break
 		}
 
 		err = spsi.savePort(port)
