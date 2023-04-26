@@ -21,7 +21,7 @@ func (s *PortCaptureServer) SavePorts(portsStream pb.PortCaptureService_SavePort
 
 	portsStreamAdapter := adapter.NewPortsStreamAdapter(portsStream)
 
-	err = savePortServiceInstance.SavePort(portsStreamAdapter)
+	err = savePortServiceInstance.SavePorts(portsStreamAdapter)
 	if err != nil {
 		response.Error = err.Error()
 		return portsStream.SendAndClose(&response)
