@@ -18,5 +18,5 @@ type SavePortsServiceInstanceFactory interface {
 }
 
 type SavePortsServiceInstance interface {
-	SavePort(portsStream adapter.PortsStream) error
+	SavePorts(portsStream adapter.PortsStream) error
 }
