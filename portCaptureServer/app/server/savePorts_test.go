@@ -62,7 +62,7 @@ func (s *SavePortsTestSuite) TestSavePorts() {
 						savePortsServiceInstanceMock := serviceMock.NewSavePortsServiceInstance(s.T())
 
 						savePortsServiceInstanceMock.On(
-							"SavePort",
+							"SavePorts",
 							mock.Anything,
 						).
 							Return(
@@ -141,7 +141,7 @@ func (s *SavePortsTestSuite) TestSavePorts() {
 						savePortsServiceInstanceMock := serviceMock.NewSavePortsServiceInstance(s.T())
 
 						savePortsServiceInstanceMock.On(
-							"SavePort",
+							"SavePorts",
 							mock.Anything,
 						).
 							Return(

@@ -13,8 +13,8 @@ type SavePortsServiceInstance struct {
 	mock.Mock
 }
 
-// SavePort provides a mock function with given fields: portsStream
-func (_m *SavePortsServiceInstance) SavePort(portsStream adapter.PortsStream) error {
+// SavePorts provides a mock function with given fields: portsStream
+func (_m *SavePortsServiceInstance) SavePorts(portsStream adapter.PortsStream) error {
 	ret := _m.Called(portsStream)
 
 	var r0 error
