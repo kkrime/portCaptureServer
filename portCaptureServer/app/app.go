@@ -13,7 +13,6 @@ import (
 	"portCaptureServer/app/service"
 	sqlService "portCaptureServer/app/service/sql"
 	"syscall"
-	"time"
 
 	"gitlab.com/avarf/getenvs"
 	"google.golang.org/grpc"
@@ -25,7 +24,8 @@ type App interface {
 
 type app struct {
 	portCaptureServer *server.PortCaptureServer
-	cancelCtx         context.CancelFunc
+	masterContext     context.Context
+	ctxCancel         context.CancelFunc
 }
 
 func NewApp() (App, error) {
@@ -59,8 +59,9 @@ func NewApp() (App, error) {
 		numberOfWorkerThreads,
 		log)
 
-	masterCtx, cancelCtx := context.WithCancel(context.Background())
-	app.cancelCtx = cancelCtx
+	masterCtx, ctxCancel := context.WithCancel(context.Background())
+	app.masterContext = masterCtx
+	app.ctxCancel = ctxCancel
 
 	app.portCaptureServer = server.NewPortCaptureServer(savePortServiceProvider, masterCtx)
 
@@ -79,27 +80,11 @@ func (a *app) Run() error {
 	log.Infof("server listening on %v", listner.Addr())
 
 	// graceful shut down
-	sigCh := make(chan os.Signal)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
+	ctx, _ := signal.NotifyContext(a.masterContext, os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 	go func() {
-		s := <-sigCh
-		a.cancelCtx()
-		log.Infof("got signal %v, attempting to GRACEFULLY shutdown", s)
-		gracefulShutdownChann := make(chan struct{})
-		go func() {
-			grpcServer.GracefulStop()
-			gracefulShutdownChann <- struct{}{}
-		}()
-
-		// create a timeout
-		gracefulShutdownTimeoutChann := time.NewTimer(time.Second * 5)
-		select {
-		case <-gracefulShutdownChann:
-			log.Info("Graceful shutdown complete")
-		case <-gracefulShutdownTimeoutChann.C:
-			log.Error("Graceful shutdown timed out, shutting down forefully")
-			grpcServer.Stop()
-		}
+		<-ctx.Done()
+		a.ctxCancel()
+		grpcServer.GracefulStop()
 	}()
 
 	// start the gRPC server
