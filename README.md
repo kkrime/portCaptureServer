@@ -77,11 +77,9 @@ Run the following from the root directory
 
 
 ## Testing
-#### Live testing
-To run live testing, make sure docker-compose is running (from step 3 above), then from the root directory run:</br> `curl -X POST localhost:8080/v1/sendports -d @./testData/ports.json`
-#### Unit testing
-I made sure to unit test the most critical parts of this service:</br>
-From `portCaptureServer/app/service/` run `go test .`
 #### Integration testing
 You will need to have `python3` and `pytest` installed:</br>
 From `integrationTests` run `sudo python3 -m pytest -s -v`
+#### Unit testing
+I made sure to unit test the most critical parts of this service:</br>
+From `portCaptureServer/app/service/` run `go test .`
