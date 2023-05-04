@@ -1,3 +1,4 @@
+This repository is the solution, [this](https://github.com/kkrime/portCaptureServer/tree/master/the%20task) is the problem
 # portCaptureServer
 
 **Please note**: I have not worked on a project that used Domain Driven Design before. </br>I familiarized myself with DDD and its core concepts as apart from this
