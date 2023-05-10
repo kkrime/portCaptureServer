@@ -24,7 +24,7 @@ type App interface {
 
 type app struct {
 	portCaptureServer *server.PortCaptureServer
-	masterContext     context.Context
+	masterCtx         context.Context
 	ctxCancel         context.CancelFunc
 }
 
@@ -60,7 +60,7 @@ func NewApp() (App, error) {
 		log)
 
 	masterCtx, ctxCancel := context.WithCancel(context.Background())
-	app.masterContext = masterCtx
+	app.masterCtx = masterCtx
 	app.ctxCancel = ctxCancel
 
 	app.portCaptureServer = server.NewPortCaptureServer(savePortServiceProvider, masterCtx)
@@ -80,7 +80,7 @@ func (a *app) Run() error {
 	log.Infof("server listening on %v", listner.Addr())
 
 	// graceful shut down
-	ctx, _ := signal.NotifyContext(a.masterContext, os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
+	ctx, _ := signal.NotifyContext(a.masterCtx, os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 	go func() {
 		<-ctx.Done()
 		a.ctxCancel()

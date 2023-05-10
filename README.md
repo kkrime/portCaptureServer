@@ -82,4 +82,5 @@ You will need to have `python3` and `pytest` installed:</br>
 From `integrationTests` run `sudo python3 -m pytest -s -v`
 #### Unit testing
 I made sure to unit test the most critical parts of this service:</br>
-From `portCaptureServer/app/service/` run `go test .`
+From `portCaptureServer/app/service/` run `go test .`</br>
+From `portCaptureServer/app/server/` run `go test .`
